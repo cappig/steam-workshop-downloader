@@ -3,6 +3,8 @@
 // @version        0.1
 // @description    Downloads steam workshop collections and items from smods.ru / steamworkshop.download
 // @author         Cappig
+// @license        GPLv3
+// @namespace      https://github.com/cappig/steam-workshop-downloader
 // @icon           https://steamcommunity.com/favicon.ico
 // @match          *://steamcommunity.com/workshop/filedetails/?id=*
 // @match          *://steamcommunity.com/sharedfiles/filedetails/?id=*

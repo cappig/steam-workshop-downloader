@@ -1,5 +1,7 @@
 # Steam workshop downloader
 
+[Download](https://greasyfork.org/en/scripts/458567-steam-collection-downloader)
+
 A simple userscript that downloads mods and mod collections from the steam workshop.
 
 A few notes:
