@@ -19,20 +19,19 @@ const green = "#4c6b22";
 const red = "#992929";
 
 const appid = document.querySelector(".apphub_sectionTab").href.split("/")[4];
-const header = document.querySelector(".workshopItemDetailsHeader");
 const parser = new DOMParser();
 
 var path = ""; // subfolder for collection mods, this only works on firefox, on Chrome it's included in the name
 
 // run this on load
 (function () {
-    "use strict";
-
     /* inject HTML */
     addButton();
 })();
 
 function addButton() {
+    const header = document.querySelector(".workshopItemDetailsHeader");
+
     const button = document.createElement("span");
 
     button.className = "btnv6_blue_hoverfade btn_medium";
@@ -48,6 +47,7 @@ function addButton() {
         let name = document.querySelector(".workshopItemTitle").innerHTML;
         path = `${name.replace(/ /g, "_")}/`;
     } else {
+        // single item
         button.innerText = "> Download item";
 
         button.addEventListener("click", fetchSingle);
@@ -104,7 +104,6 @@ function startFetching() {
 var done = 0,
     total = 0,
     failed = 0;
-//var total = 0;
 function incrementDownloadCount(hasFailed) {
     if (hasFailed) {
         failed++;
@@ -114,11 +113,7 @@ function incrementDownloadCount(hasFailed) {
 
     let button = document.querySelector("#SD-dbtn");
     if (done + failed == total) {
-        if (failed > 0) {
-            button.style.background = red;
-        } else {
-            button.style.background = green;
-        }
+        button.style.background = failed > 0 ? red : green;
 
         button.innerText = `> Done! || ${done}/${total} | failed: ${failed}`;
         button.style.setProperty("color", "white", "important");
@@ -151,7 +146,7 @@ function modifyFetchStatusHTML(id, failed) {
     let status = document.getElementById(id);
 
     if (status == null) {
-        return; // for single mods
+        return;
     }
 
     if (failed) {
@@ -196,7 +191,6 @@ function getSmodsURL(id) {
     }
 }
 
-var dlErrors = [];
 function fetchSmodsID(id) {
     console.log(`<Steam-downloader> Started downloading ${id}`);
 
@@ -207,8 +201,8 @@ function fetchSmodsID(id) {
         url: url,
 
         onload: function (response) {
+            // check for timeout
             if (response.status == 524) {
-                // check for timeout
                 console.log(`<Steam-downloader> Timeout fetching ${id}. Retrying...`);
                 fetchSmodsID(id);
                 return;
