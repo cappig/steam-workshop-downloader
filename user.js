@@ -38,7 +38,7 @@ function addButton() {
     button.id = "SD-dbtn";
     button.style.padding = "10px";
 
-    if (document.querySelector(".collectionNotifications")) {
+    if (document.querySelector(".collectionNotifications")) { 
         // collection
         button.innerText = "> Download collection";
 
@@ -46,7 +46,7 @@ function addButton() {
 
         let name = document.querySelector(".workshopItemTitle").innerHTML;
         path = `${name.replace(/ /g, "_")}/`;
-    } else {
+    } else { 
         // single item
         button.innerText = "> Download item";
 
@@ -68,7 +68,9 @@ function fetchSingle() {
     total = 1;
     document.querySelector("#SD-dbtn").innerText = `> Downloading... || 0/1 | failed: 0`;
 
-    let id = document.URL.split("id=")[1];
+    let url = new URL(document.URL);
+    let id = url.searchParams.get("id");
+
     fetchSmodsID(id);
 }
 
@@ -113,7 +115,7 @@ function incrementDownloadCount(hasFailed) {
 
     let button = document.querySelector("#SD-dbtn");
     if (done + failed == total) {
-        button.style.background = failed > 0 ? red : green;
+        button.style.background = (failed > 0) ? red : green;
 
         button.innerText = `> Done! || ${done}/${total} | failed: ${failed}`;
         button.style.setProperty("color", "white", "important");
@@ -170,8 +172,11 @@ function downloadModbse(MBid, id) {
         data: requestData,
 
         onload: function (response) {
+            let document = parser.parseFromString(response.response, "text/html");
+            let download_url = document.querySelector("#downloadbtn > a").href;
+
             GM_download({
-                url: response.finalUrl,
+                url: download_url,
                 name: `${path}${id}.zip`
             });
             console.log(`<Steam-downloader> Successfully downloaded ${id}`);
