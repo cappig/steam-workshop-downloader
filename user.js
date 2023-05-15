@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Steam collection Downloader
-// @version        0.1
+// @version        0.2
 // @description    Downloads steam workshop collections and items from smods.ru / steamworkshop.download
 // @author         Cappig
 // @license        GPLv3
