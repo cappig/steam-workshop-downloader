@@ -38,7 +38,7 @@ function addButton() {
     button.id = "SD-dbtn";
     button.style.padding = "10px";
 
-    if (document.querySelector(".collectionNotifications")) { 
+    if (document.querySelector(".collectionNotifications")) {
         // collection
         button.innerText = "> Download collection";
 
@@ -214,7 +214,7 @@ function fetchSmodsID(id) {
             }
 
             let document = parser.parseFromString(response.response, "text/html");
-            let item = document.querySelector(".post-inner");
+            let item = document.querySelector(".skymods-excerpt-btn");
 
             if (item == null) {
                 console.log(`<Steam-downloader> Error fetching ${id} from smods.ru. Trying SWD`);
@@ -222,7 +222,7 @@ function fetchSmodsID(id) {
                 // Fallback to SWD
                 downloadSWD(id);
             } else {
-                let url = item.querySelector(".skymods-excerpt-btn").href;
+                let url = item.href;
                 let MBid = url.split("/")[3];
 
                 console.log(`<Steam-downloader> Successfully fetched ${id}`);
