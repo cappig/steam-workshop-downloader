@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Steam collection Downloader
-// @version        0.2.1
+// @version        0.3.0
 // @description    Downloads steam workshop collections and items from smods.ru / steamworkshop.download
 // @author         Cappig
 // @license        GPLv3
@@ -13,7 +13,7 @@
 // ==/UserScript==
 "use strict";
 
-// consistant color palette that fits with steams design
+// consistent color palette that fits with steams design
 const blue = "#54a5d4";
 const green = "#4c6b22";
 const red = "#992929";
@@ -21,18 +21,15 @@ const red = "#992929";
 const appid = document.querySelector(".apphub_sectionTab").href.split("/")[4];
 const parser = new DOMParser();
 
+var button; // Store the button so that we don't have to call querySelector() all the time
 var path = ""; // subfolder for collection mods, this only works on firefox, on Chrome it's included in the name
 
-// run this on load
-(function () {
-    /* inject HTML */
-    addButton();
-})();
 
-function addButton() {
+// Run this on load and inject the HTML download button
+(function () {
     const header = document.querySelector(".workshopItemDetailsHeader");
 
-    const button = document.createElement("span");
+    button = document.createElement("span"); // global variable
 
     button.className = "btnv6_blue_hoverfade btn_medium";
     button.id = "SD-dbtn";
@@ -42,11 +39,11 @@ function addButton() {
         // collection
         button.innerText = "> Download collection";
 
-        button.addEventListener("click", startFetching);
+        button.addEventListener("click", fetchCollection);
 
         let name = document.querySelector(".workshopItemTitle").innerHTML;
         path = `${name.replace(/ /g, "_")}/`;
-    } else { 
+    } else {
         // single item
         button.innerText = "> Download item";
 
@@ -54,7 +51,12 @@ function addButton() {
     }
 
     header.appendChild(button);
-}
+})();
+
+var isFetching = false;
+var done = 0,
+    total = 0,
+    failed = 0;
 
 function fetchSingle() {
     // prevent fetching twice
@@ -63,10 +65,9 @@ function fetchSingle() {
     }
     isFetching = true;
 
-    done = 0;
-    failed = 0;
     total = 1;
-    document.querySelector("#SD-dbtn").innerText = `> Downloading... || 0/1 | failed: 0`;
+
+    button.innerText = `> Downloading... || 0/1 | failed: 0`;
 
     let url = new URL(document.URL);
     let id = url.searchParams.get("id");
@@ -74,8 +75,7 @@ function fetchSingle() {
     fetchSmodsID(id);
 }
 
-var isFetching = false;
-function startFetching() {
+function fetchCollection() {
     // prevent fetching twice
     if (isFetching) {
         return;
@@ -86,26 +86,21 @@ function startFetching() {
     let collectionChildren = [...document.querySelector(".collectionChildren").children];
     let collectionItems = collectionChildren.filter((item) => item.id != "");
 
-    done = 0;
-    failed = 0;
     total = collectionItems.length;
-    document.querySelector("#SD-dbtn").innerText = `> Downloading... || 0/${total} | failed: 0`;
+
+    button.innerText = `> Downloading... || 0/${total} | failed: 0`;
 
     // queue all items for fetching and add HTML status indicator
     for (let item of collectionItems) {
         let id = item.id.split("_")[1];
 
         addFetchStatusHTML(id, item);
-
         fetchSmodsID(id);
     }
 
     console.log("<Steam-downloader> All items queued");
 }
 
-var done = 0,
-    total = 0,
-    failed = 0;
 function incrementDownloadCount(hasFailed) {
     if (hasFailed) {
         failed++;
@@ -113,9 +108,8 @@ function incrementDownloadCount(hasFailed) {
         done++;
     }
 
-    let button = document.querySelector("#SD-dbtn");
     if (done + failed == total) {
-        button.style.background = (failed > 0) ? red : green;
+        button.style.background = failed > 0 ? red : green;
 
         button.innerText = `> Done! || ${done}/${total} | failed: ${failed}`;
         button.style.setProperty("color", "white", "important");
@@ -144,6 +138,7 @@ function addFetchStatusHTML(id, item) {
 
     item.querySelector(".workshopItemTitle ").appendChild(status);
 }
+
 function modifyFetchStatusHTML(id, failed) {
     let status = document.getElementById(id);
 
@@ -175,14 +170,11 @@ function downloadModbse(MBid, id) {
             let document = parser.parseFromString(response.response, "text/html");
             let download_url = document.querySelector("#downloadbtn > a").href;
 
-            GM_download({
-                url: download_url,
-                name: `${path}${id}.zip`
-            });
-            console.log(`<Steam-downloader> Successfully downloaded ${id}`);
+            downloadFile(id, download_url);
         }
     });
 }
+
 function getSmodsURL(id) {
     switch (appid) {
         case "255710": // Cities: Skylines
@@ -199,6 +191,7 @@ function getSmodsURL(id) {
 function fetchSmodsID(id) {
     console.log(`<Steam-downloader> Started downloading ${id}`);
 
+    let retries = 0;
     let url = getSmodsURL(id);
 
     GM_xmlhttpRequest({
@@ -206,18 +199,11 @@ function fetchSmodsID(id) {
         url: url,
 
         onload: function (response) {
-            // check for timeout
-            if (response.status == 524) {
-                console.log(`<Steam-downloader> Timeout fetching ${id}. Retrying...`);
-                fetchSmodsID(id);
-                return;
-            }
-
             let document = parser.parseFromString(response.response, "text/html");
             let item = document.querySelector(".skymods-excerpt-btn");
 
             if (item == null) {
-                console.log(`<Steam-downloader> Error fetching ${id} from smods.ru. Trying SWD`);
+                console.warn(`<Steam-downloader> Error fetching ${id} from smods.ru. Trying SWD`);
 
                 // Fallback to SWD
                 downloadSWD(id);
@@ -227,14 +213,21 @@ function fetchSmodsID(id) {
 
                 console.log(`<Steam-downloader> Successfully fetched ${id}`);
                 downloadModbse(MBid, id);
+            }
+        },
 
-                incrementDownloadCount(false);
-                modifyFetchStatusHTML(id, false);
+        // Is this even necessary?
+        ontimeout: function (response) {
+            if (retries < 3) {
+                console.warn(`<Steam-downloader> Timeout fetching ${id} from Smods. Retrying... [${retries}/3]`);
+                fetchSmodsID(id);
+            } else {
+                console.warn(`<Steam-downloader> Timeout fetching ${id}!`);
             }
         },
 
         onerror: function (response) {
-            console.log(response);
+            console.warn(`<Steam-downloader> Error while fetching ${id}!\n ERROR: ${response}`);
         }
     });
 }
@@ -251,18 +244,33 @@ function downloadSWD(id) {
                 incrementDownloadCount(true);
                 modifyFetchStatusHTML(id, true);
 
-                console.log(`<Steam-downloader> Error downloading ${id} from SWD`);
+                console.warn(`<Steam-downloader> Error downloading ${id} from SWD!`);
             } else {
-                GM_download({
-                    url: response.finalUrl,
-                    name: `${path}${id}.zip`
-                });
-
-                incrementDownloadCount(false);
-                modifyFetchStatusHTML(id, false);
-
-                console.log(`<Steam-downloader> Successfully downloaded ${id} from SWD`);
+                downloadFile(id, response.finalUrl);
             }
+        }
+    });
+}
+
+function downloadFile(id, url) {
+    console.log(`<Steam-downloader> Started downloading ${id}`);
+
+    GM_download({
+        url: url,
+        name: `${path}${id}.zip`,
+
+        onload: function (response) {
+            console.log(`<Steam-downloader> Successfully downloaded ${id}`);
+
+            incrementDownloadCount(false);
+            modifyFetchStatusHTML(id, false);
+        },
+
+        onerror: function (response) {
+            console.warn(`<Steam-downloader> Error downloading ${id}!\n ERROR: ${response}`);
+
+            incrementDownloadCount(true);
+            modifyFetchStatusHTML(id, true);
         }
     });
 }
