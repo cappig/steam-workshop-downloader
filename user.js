@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Steam collection Downloader
-// @version        0.3.0
+// @version        0.3.1
 // @description    Downloads steam workshop collections and items from smods.ru / steamworkshop.download
 // @author         Cappig
 // @license        GPLv3
@@ -23,7 +23,6 @@ const parser = new DOMParser();
 
 var button; // Store the button so that we don't have to call querySelector() all the time
 var path = ""; // subfolder for collection mods, this only works on firefox, on Chrome it's included in the name
-
 
 // Run this on load and inject the HTML download button
 (function () {
@@ -233,20 +232,25 @@ function fetchSmodsID(id) {
 }
 
 function downloadSWD(id) {
-    let url = `http://workshop8.abcvg.info/archive/${appid}/${id}.zip`;
-
     GM_xmlhttpRequest({
-        method: "GET",
-        url: url,
+        method: "POST",
+        url: "http://steamworkshop.download/online/steamonline.php",
+        headers: {
+            "content-type": "application/x-www-form-urlencoded"
+        },
+        data: `item=${id}&app=${appid}`,
 
         onload: function (response) {
-            if (response.status != 200) {
+            let document = parser.parseFromString(response.response, "text/html");
+            let download_url = document.querySelector("pre > a");
+
+            if (download_url == null) {
+                console.warn(`<Steam-downloader> Error downloading ${id} from SWD!`);
+
                 incrementDownloadCount(true);
                 modifyFetchStatusHTML(id, true);
-
-                console.warn(`<Steam-downloader> Error downloading ${id} from SWD!`);
             } else {
-                downloadFile(id, response.finalUrl);
+                downloadFile(id, download_url.href);
             }
         }
     });
