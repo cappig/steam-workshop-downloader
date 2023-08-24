@@ -154,26 +154,6 @@ function modifyFetchStatusHTML(id, failed) {
     }
 }
 
-function downloadModbse(MBid, id) {
-    let requestData = `op=download2&id=${MBid}`;
-
-    GM_xmlhttpRequest({
-        method: "POST",
-        url: "https://modsbase.com/",
-        headers: {
-            "content-type": "application/x-www-form-urlencoded"
-        },
-        data: requestData,
-
-        onload: function (response) {
-            let document = parser.parseFromString(response.response, "text/html");
-            let download_url = document.querySelector("#downloadbtn > a").href;
-
-            downloadFile(id, download_url);
-        }
-    });
-}
-
 function getSmodsURL(id) {
     switch (appid) {
         case "255710": // Cities: Skylines
@@ -201,18 +181,7 @@ function fetchSmodsID(id) {
             let document = parser.parseFromString(response.response, "text/html");
             let item = document.querySelector(".skymods-excerpt-btn");
 
-            if (item == null) {
-                console.warn(`<Steam-downloader> Error fetching ${id} from smods.ru. Trying SWD`);
-
-                // Fallback to SWD
-                downloadSWD(id);
-            } else {
-                let url = item.href;
-                let MBid = url.split("/")[3];
-
-                console.log(`<Steam-downloader> Successfully fetched ${id}`);
-                downloadModbse(MBid, id);
-            }
+            downloadSWD(id);
         },
 
         // Is this even necessary?
@@ -232,6 +201,8 @@ function fetchSmodsID(id) {
 }
 
 function downloadSWD(id) {
+    console.log(`<Steam-downloader> Started downloading ${id} from SWD`);
+
     GM_xmlhttpRequest({
         method: "POST",
         url: "http://steamworkshop.download/online/steamonline.php",

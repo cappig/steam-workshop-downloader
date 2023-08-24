@@ -1,5 +1,7 @@
 # Steam workshop downloader
 
+## ⚠️ $\textcolor{red}{\textsf{This script no longer works}}$ ⚠️
+
 ![screenshot](steamdownloader.png)
 
 ## [Get the script ↡](https://greasyfork.org/en/scripts/458567-steam-collection-downloader)
